@@ -67,12 +67,9 @@ impl SolanaAggregator {
                         {
                             Ok(transaction) => {
                                 // Format the transaction time for logging
-                                let naive = NaiveDateTime::from_timestamp(
-                                    transaction.block_time.unwrap(),
-                                    0,
-                                );
-                                let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-                                let newdate = datetime.format("%Y-%m-%d %H:%M:%S");
+                                let datetime =
+                                    DateTime::from_timestamp(transaction.block_time.unwrap(), 0);
+                                let newdate = datetime.unwrap().format("%Y-%m-%d %H:%M:%S");
 
                                 tracing::info!(
                                     "📄 Storing transaction with signature {} ({})",
