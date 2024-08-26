@@ -1,4 +1,5 @@
 mod aggregator;
+mod utils;
 
 use aggregator::SolanaAggregator;
 use std::net::SocketAddr;
