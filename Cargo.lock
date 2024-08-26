@@ -3999,6 +3999,7 @@ dependencies = [
  "clap 4.5.16",
  "solana-client",
  "solana-sdk",
+ "solana-transaction-status",
  "thiserror",
  "tokio",
  "tracing",
