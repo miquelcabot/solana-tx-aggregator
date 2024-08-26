@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Duration;
 
+use chrono::prelude::*;
 use solana_client::rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient};
 use solana_sdk::clock::Epoch;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -57,7 +58,7 @@ impl SolanaAggregator {
             match signature_results {
                 Ok(signatures) => {
                     // Process each transaction signature
-                    for signature_info in signatures.iter() {
+                    for signature_info in signatures.iter().rev() {
                         let signature = Signature::from_str(&signature_info.signature)
                             .expect("Invalid signature format");
                         match &self
@@ -65,10 +66,18 @@ impl SolanaAggregator {
                             .get_transaction(&signature, UiTransactionEncoding::JsonParsed)
                         {
                             Ok(transaction) => {
+                                // Format the transaction time for logging
+                                let naive = NaiveDateTime::from_timestamp(
+                                    transaction.block_time.unwrap(),
+                                    0,
+                                );
+                                let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+                                let newdate = datetime.format("%Y-%m-%d %H:%M:%S");
+
                                 tracing::info!(
                                     "📄 Storing transaction with signature {} ({})",
                                     signature,
-                                    transaction.block_time.unwrap()
+                                    newdate
                                 );
                                 let transaction = transaction.transaction.transaction.clone();
                                 let _ = &self.transactions.insert(signature, transaction);

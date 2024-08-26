@@ -4084,6 +4084,7 @@ dependencies = [
 name = "solforge-case-study"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "clap 4.5.16",
  "solana-client",
  "solana-sdk",

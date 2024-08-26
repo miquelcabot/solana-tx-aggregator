@@ -66,4 +66,3 @@ pub fn init_tracing() {
         .with(env)
         .init();
 }
-
