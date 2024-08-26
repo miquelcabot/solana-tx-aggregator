@@ -1,9 +1,12 @@
-mod aggregator;
-
 use std::net::SocketAddr;
+use std::time::Duration;
 
 use anyhow::Context;
 use clap::Parser;
+use solana_client::rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient};
+use solana_sdk::commitment_config::CommitmentConfig;
+use solana_sdk::signature::Signature;
+use tokio::time::sleep;
 use url::Url;
 
 #[derive(Parser, Debug)]
@@ -32,15 +35,45 @@ async fn main() -> anyhow::Result<()> {
     println!("RPC URL: {}", rpc_url);
     println!("Local address: {}", local_address);
 
-    collect_data(&rpc_url, &local_address).await?;
+    collect_data(&rpc_url).await?;
 
     Ok(())
 }
 
-async fn collect_data(rpc_url: &Url, local_address: &SocketAddr) -> Result<(), Error> {
-    let aggregator = aggregator::SolanaAggregator::new(rpc_url.as_str());
+async fn collect_data(rpc_url: &Url) -> Result<(), Error> {
+    // Create a new RPC client connected to the a Solana RPC URL
+    let client = RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::confirmed());
 
-    Ok(())
+    // Set up the parameters for fetching signatures
+    let mut last_signature: Option<Signature> = None;
+
+    loop {
+        // Fetch the latest signatures for confirmed transactions
+        let signature_results = client.get_signatures_for_address_with_config(
+            &client
+                .get_account_with_commitment(
+                    &client.get_identity().unwrap(),
+                    CommitmentConfig::confirmed(),
+                )
+                .unwrap()
+                .value
+                .unwrap()
+                .owner,
+            GetConfirmedSignaturesForAddress2Config {
+                before: None,
+                until: last_signature,
+                limit: Some(1000),
+                commitment: Some(CommitmentConfig::confirmed()),
+            },
+        );
+
+        println!("Signature results: {:#?}", signature_results);
+
+        // Wait for a bit before fetching new transactions
+        sleep(Duration::from_secs(1)).await;
+    }
+
+    // Ok(())
 }
 
 pub fn init_tracing() {
