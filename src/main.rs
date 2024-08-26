@@ -3,9 +3,9 @@ mod aggregator;
 use aggregator::SolanaAggregator;
 use std::net::SocketAddr;
 
-use anyhow::Context;
 use clap::Parser;
 use url::Url;
+use warp::Filter;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -15,29 +15,34 @@ struct Args {
     rpc_url: String,
 
     /// The address of this local RESTful API server
-    #[arg(short, long, default_value = "0.0.0.0:0")]
+    #[arg(short, long, default_value = "0.0.0.0:8080")]
     local_address: String,
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() {
     init_tracing();
     let args = Args::parse();
 
-    let rpc_url = args.rpc_url.parse::<Url>().context("Invalid RPC URL")?;
+    let rpc_url = args.rpc_url.parse::<Url>().expect("Invalid RPC URL");
     let local_address = args
         .local_address
         .parse::<SocketAddr>()
-        .context("Invalid local address")?;
+        .expect("Invalid local address");
 
     tracing::info!("🌐 Solana RPC URL: {}", rpc_url);
     tracing::info!("🛠️ Local RESTful API address: {}", local_address);
 
     // Create a new Solana aggregator
     let mut aggregator = SolanaAggregator::new(rpc_url.as_str());
-    aggregator.fetch_transactions().await;
+    tokio::spawn(async move {
+        aggregator.fetch_transactions().await;
+    });
 
-    Ok(())
+    // GET /hello/warp => 200 OK with body "Hello, warp!"
+    let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
+
+    warp::serve(hello).run(local_address).await;
 }
 
 pub fn init_tracing() {
@@ -62,8 +67,3 @@ pub fn init_tracing() {
         .init();
 }
 
-#[derive(Debug, thiserror::Error)]
-enum Error {
-    #[error("Connection failed: {0:?}")]
-    ConnectionFailed(std::io::Error),
-}
