@@ -29,5 +29,18 @@ async fn main() -> anyhow::Result<()> {
     println!("RPC URL: {}", rpc_address);
     println!("Local address: {}", local_address);
 
+    collect_data(&rpc_address, &local_address).await?;
+
     Ok(())
+}
+
+async fn collect_data(rpc_address: &Url, local_address: &SocketAddr) -> Result<(), Error> {
+    // Your code here
+    Ok(())
+}
+
+#[derive(Debug, thiserror::Error)]
+enum Error {
+    #[error("Connection failed: {0:?}")]
+    ConnectionFailed(std::io::Error),
 }
