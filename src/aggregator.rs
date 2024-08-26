@@ -60,7 +60,6 @@ impl SolanaAggregator {
                     for signature_info in signatures.iter() {
                         let signature = Signature::from_str(&signature_info.signature)
                             .expect("Invalid signature format");
-                        println!("Signature: {}", signature);
                         match &self
                             .client
                             .get_transaction(&signature, UiTransactionEncoding::JsonParsed)
