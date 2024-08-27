@@ -4087,6 +4087,7 @@ dependencies = [
  "chrono",
  "clap 4.5.16",
  "serde",
+ "serde_json",
  "solana-client",
  "solana-sdk",
  "solana-transaction-status",
