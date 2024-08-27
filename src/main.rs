@@ -1,16 +1,17 @@
 mod aggregator;
+mod transaction_details;
 mod utils;
 
 use aggregator::SolanaAggregator;
-use solana_sdk::signature::Signature;
-use solana_transaction_status::EncodedTransaction;
 use std::{
     collections::HashMap,
     net::SocketAddr,
     sync::{Arc, Mutex},
 };
+use transaction_details::TransactionDetails;
 
 use clap::Parser;
+use solana_sdk::signature::Signature;
 use url::Url;
 use warp::Filter;
 
@@ -40,13 +41,12 @@ async fn main() {
     tracing::info!("🌐 Solana RPC URL: {}", rpc_url);
     tracing::info!("🛠️ Local RESTful API address: {}", local_address);
 
-    let transactions_hash: HashMap<Signature, EncodedTransaction> = HashMap::new();
+    let transactions_hash: HashMap<Signature, TransactionDetails> = HashMap::new();
     let transactions = Arc::new(Mutex::new(transactions_hash));
 
     // Create a new Solana aggregator
     let aggregator = SolanaAggregator::new(rpc_url.as_str(), Arc::clone(&transactions));
 
-    // Spawn the background task to fetch transactions
     tokio::spawn(async move {
         aggregator.fetch_transactions().await;
     });
