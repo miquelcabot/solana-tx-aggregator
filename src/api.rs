@@ -41,7 +41,9 @@ pub fn create_api(
                     let transactions_for_day: Vec<&TransactionDetails> = transactions
                         .values()
                         .filter(|transaction| {
-                            chrono::NaiveDateTime::from_timestamp(transaction.timestamp, 0).date()
+                            chrono::DateTime::from_timestamp(transaction.timestamp, 0)
+                                .unwrap()
+                                .date_naive()
                                 == date
                         })
                         .collect();
