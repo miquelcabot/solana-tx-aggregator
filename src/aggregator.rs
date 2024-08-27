@@ -194,10 +194,8 @@ impl SolanaAggregator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_sdk::signature::Signature;
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
-    use tokio::runtime::Runtime;
 
     fn create_simple_aggregator() -> SolanaAggregator {
         let transactions = Arc::new(Mutex::new(HashMap::new()));
