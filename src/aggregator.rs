@@ -5,7 +5,9 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use solana_client::client_error::ClientError;
 use solana_client::rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient};
+use solana_client::rpc_response::RpcConfirmedTransactionStatusWithSignature;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::Signature;
 use solana_transaction_status::{EncodedTransaction, UiMessage, UiTransactionEncoding};
@@ -14,9 +16,9 @@ use tokio::time::sleep;
 const SLEEP_DURATION: u64 = 1;
 
 /// Solana Aggregator
-/// 
+///
 /// This struct represents a Solana aggregator.
-/// 
+///
 /// # Fields
 /// * `client` - The RPC client
 /// * `transactions` - The transactions, stored in a mutexed hash map
@@ -27,13 +29,13 @@ pub struct SolanaAggregator {
 
 impl SolanaAggregator {
     /// Create a new Solana aggregator
-    /// 
+    ///
     /// This function creates a new Solana aggregator.
-    /// 
+    ///
     /// # Arguments
     /// * `rpc_url` - The RPC URL for Solana
     /// * `transactions` - The transactions mutexed hash map
-    /// 
+    ///
     /// # Returns
     /// A new Solana aggregator
     pub fn new(
@@ -50,9 +52,9 @@ impl SolanaAggregator {
     }
 
     /// Fetch transactions
-    /// 
+    ///
     /// This function fetches transactions from the Solana network.
-    /// 
+    ///
     /// # Arguments
     /// * `self` - The Solana aggregator
     pub async fn fetch_transactions(&self) {
@@ -61,76 +63,99 @@ impl SolanaAggregator {
 
         loop {
             // Fetch the latest signatures for finalized transactions
-            let signature_results = self.client.get_signatures_for_address_with_config(
-                &self
-                    .client
-                    .get_account_with_commitment(
-                        &self.client.get_identity().unwrap(),
-                        CommitmentConfig::finalized(),
-                    )
-                    .unwrap()
-                    .value
-                    .unwrap()
-                    .owner,
-                GetConfirmedSignaturesForAddress2Config {
-                    before: None,
-                    until: last_signature,
-                    limit: Some(1000),
-                    commitment: Some(CommitmentConfig::finalized()),
-                },
-            );
-
-            match signature_results {
+            match self.fetch_signatures(last_signature).await {
                 Ok(signatures) => {
-                    // Process each transaction signature
-                    for signature_info in signatures.iter().rev() {
-                        let signature = Signature::from_str(&signature_info.signature)
-                            .expect("Invalid signature format");
-                        match self
-                            .client
-                            .get_transaction(&signature, UiTransactionEncoding::Json)
-                        {
-                            Ok(transaction) => {
-                                let block_time = transaction.block_time.unwrap_or(0);
-
-                                if let EncodedTransaction::Json(transaction) =
-                                    transaction.transaction.transaction
-                                {
-                                    if let UiMessage::Raw(message) = transaction.message {
-                                        let sender = &message.account_keys[0];
-                                        let receiver = &message.account_keys[1];
-                                        let data = &message.instructions[0].data;
-
-                                        let transaction_details = TransactionDetails {
-                                            sender: sender.to_string(),
-                                            receiver: receiver.to_string(),
-                                            data: data.to_string(),
-                                            timestamp: block_time,
-                                        };
-                                        tracing::info!(
-                                            "📄 Storing transaction with signature {} ({})",
-                                            signature,
-                                            utils::format_time(block_time)
-                                        );
-                                        let mut transactions = self.transactions.lock().unwrap();
-                                        transactions.insert(signature, transaction_details);
-                                    }
-                                }
-                                last_signature = Some(signature);
-                            }
-                            Err(err) => {
-                                tracing::error!("❌ Error fetching transaction: {}", err);
-                            }
-                        }
-                    }
+                    self.process_signatures(signatures).await;
+                    last_signature = self.update_last_signature();
                 }
                 Err(err) => {
                     tracing::error!("❌ Error fetching signatures: {}", err);
                 }
             }
 
-            // Wait for a bit before fetching new transactions
+            // Wait for a bit before fetching more signatures
             sleep(Duration::from_secs(SLEEP_DURATION)).await;
         }
+    }
+
+    async fn fetch_signatures(
+        &self,
+        last_signature: Option<Signature>,
+    ) -> Result<Vec<RpcConfirmedTransactionStatusWithSignature>, ClientError> {
+        let account = self
+            .client
+            .get_account_with_commitment(
+                &self.client.get_identity().unwrap(),
+                CommitmentConfig::finalized(),
+            )
+            .unwrap()
+            .value
+            .unwrap()
+            .owner;
+        let config = GetConfirmedSignaturesForAddress2Config {
+            before: None,
+            until: last_signature,
+            limit: Some(1000),
+            commitment: Some(CommitmentConfig::finalized()),
+        };
+
+        self.client
+            .get_signatures_for_address_with_config(&account, config)
+    }
+
+    async fn process_signatures(
+        &self,
+        signatures: Vec<solana_client::rpc_response::RpcConfirmedTransactionStatusWithSignature>,
+    ) {
+        for signature_info in signatures.iter().rev() {
+            let signature =
+                Signature::from_str(&signature_info.signature).expect("Invalid signature format");
+            match self.fetch_and_process_transaction(&signature).await {
+                Ok(_) => {}
+                Err(err) => {
+                    tracing::error!("❌ Error processing transaction: {}", err);
+                }
+            }
+        }
+    }
+
+    async fn fetch_and_process_transaction(
+        &self,
+        signature: &Signature,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let transaction = self
+            .client
+            .get_transaction(signature, UiTransactionEncoding::Json)?;
+
+        let block_time = transaction.block_time.unwrap_or(0);
+
+        if let EncodedTransaction::Json(transaction) = transaction.transaction.transaction {
+            if let UiMessage::Raw(message) = transaction.message {
+                let sender = &message.account_keys[0];
+                let receiver = &message.account_keys[1];
+                let data = &message.instructions[0].data;
+
+                let transaction_details = TransactionDetails {
+                    sender: sender.to_string(),
+                    receiver: receiver.to_string(),
+                    data: data.to_string(),
+                    timestamp: block_time,
+                };
+                tracing::info!(
+                    "📄 Storing transaction with signature {} ({})",
+                    signature,
+                    utils::format_time(block_time)
+                );
+                let mut transactions = self.transactions.lock().unwrap();
+                transactions.insert(*signature, transaction_details);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn update_last_signature(&self) -> Option<Signature> {
+        let transactions = self.transactions.lock().unwrap();
+        transactions.keys().last().cloned()
     }
 }
