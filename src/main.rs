@@ -2,7 +2,13 @@ mod aggregator;
 mod utils;
 
 use aggregator::SolanaAggregator;
-use std::net::SocketAddr;
+use solana_sdk::signature::Signature;
+use solana_transaction_status::EncodedTransaction;
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    sync::{Arc, Mutex},
+};
 
 use clap::Parser;
 use url::Url;
@@ -34,15 +40,21 @@ async fn main() {
     tracing::info!("🌐 Solana RPC URL: {}", rpc_url);
     tracing::info!("🛠️ Local RESTful API address: {}", local_address);
 
+    let transactions_hash: HashMap<Signature, EncodedTransaction> = HashMap::new();
+    let transactions = Arc::new(Mutex::new(transactions_hash));
+
     // Create a new Solana aggregator
-    let mut aggregator = SolanaAggregator::new(rpc_url.as_str());
+    let aggregator = SolanaAggregator::new(rpc_url.as_str(), Arc::clone(&transactions));
+
+    // Spawn the background task to fetch transactions
     tokio::spawn(async move {
         aggregator.fetch_transactions().await;
     });
 
-    // GET /hello/warp => 200 OK with body "Hello, warp!"
+    // Example endpoint: GET /hello/warp => 200 OK with body "Hello, warp!"
     let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
 
+    // Start the Warp server
     warp::serve(hello).run(local_address).await;
 }
 
