@@ -190,3 +190,37 @@ impl SolanaAggregator {
         transactions.keys().last().cloned()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use solana_sdk::signature::Signature;
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex};
+    use tokio::runtime::Runtime;
+
+    fn create_simple_aggregator() -> SolanaAggregator {
+        let transactions = Arc::new(Mutex::new(HashMap::new()));
+        SolanaAggregator {
+            client: RpcClient::new("http://localhost:8899"), // Stubbed out client
+            transactions,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_process_signatures_empty() {
+        // Check that processing an empty list of signatures does nothing
+        let aggregator = create_simple_aggregator();
+        aggregator.process_signatures(vec![]).await;
+        let transactions = aggregator.transactions.lock().unwrap();
+        assert!(transactions.is_empty()); // Ensure no transactions were added
+    }
+
+    #[tokio::test]
+    async fn test_update_last_signature_empty() {
+        // Check that updating last signature on an empty map returns None
+        let aggregator = create_simple_aggregator();
+        let last_signature = aggregator.update_last_signature();
+        assert!(last_signature.is_none()); // Expect None when no transactions exist
+    }
+}
