@@ -27,13 +27,19 @@ pub fn create_api(
              transactions: Arc<Mutex<HashMap<Signature, TransactionDetails>>>| {
                 let transactions = transactions.lock().unwrap();
 
-                if let Some(signature) = params.get("id") {
-                    let signature =
-                        Signature::from_str(signature).expect("Invalid signature format");
-                    if let Some(transaction) = transactions.get(&signature) {
-                        return warp::reply::json(transaction);
-                    } else {
-                        return warp::reply::json(&None::<TransactionDetails>); // Return null if not found
+                if let Some(signature_str) = params.get("id") {
+                    match Signature::from_str(signature_str) {
+                        Ok(signature) => {
+                            if let Some(transaction) = transactions.get(&signature) {
+                                return warp::reply::json(transaction);
+                            } else {
+                                return warp::reply::json(&None::<TransactionDetails>);
+                                // Return null if not found
+                            }
+                        }
+                        Err(_) => {
+                            return warp::reply::json(&"Invalid signature format");
+                        }
                     }
                 }
 
