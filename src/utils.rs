@@ -16,3 +16,15 @@ pub fn format_time(timestamp: i64) -> String {
 
     newdate.to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_time() {
+        let timestamp = 1620000000; // This corresponds to 2021-05-03 00:00:00 UTC
+        let formatted_time = format_time(timestamp);
+        assert_eq!(formatted_time, "2021-05-03 00:00:00");
+    }
+}
