@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Transaction details
-/// 
+///
 /// This struct represents the details of a transaction.
-/// 
+///
 /// # Fields
 /// * `sender` - The sender of the transaction
 /// * `receiver` - The receiver of the transaction

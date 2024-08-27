@@ -6,7 +6,10 @@ use aggregator::SolanaAggregator;
 use transaction_details::TransactionDetails;
 
 use std::{
-    collections::HashMap, net::SocketAddr, str::FromStr, sync::{Arc, Mutex}
+    collections::HashMap,
+    net::SocketAddr,
+    str::FromStr,
+    sync::{Arc, Mutex},
 };
 
 use clap::Parser;
@@ -93,7 +96,7 @@ async fn main() {
 }
 
 /// Return a mutable reference to the transactions hash map
-/// 
+///
 /// This function returns a mutable reference to the transactions hash map.
 fn with_transactions(
     transactions: Arc<Mutex<HashMap<Signature, TransactionDetails>>>,
@@ -105,7 +108,7 @@ fn with_transactions(
 }
 
 /// Initialize tracing
-/// 
+///
 /// This function initializes the tracing subscriber.
 pub fn init_tracing() {
     use tracing::level_filters::LevelFilter;
