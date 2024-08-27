@@ -4,9 +4,7 @@ mod utils;
 
 use aggregator::SolanaAggregator;
 use std::{
-    collections::HashMap,
-    net::SocketAddr,
-    sync::{Arc, Mutex},
+    collections::HashMap, net::SocketAddr, str::FromStr, sync::{Arc, Mutex}
 };
 use transaction_details::TransactionDetails;
 
@@ -51,11 +49,49 @@ async fn main() {
         aggregator.fetch_transactions().await;
     });
 
-    // Example endpoint: GET /hello/warp => 200 OK with body "Hello, warp!"
-    let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
+    let transactions_filter = warp::path("transactions")
+        .and(warp::query::<HashMap<String, String>>())
+        .and(with_transactions(transactions))
+        .map(
+            |params: HashMap<String, String>,
+             transactions: Arc<Mutex<HashMap<Signature, TransactionDetails>>>| {
+                let transactions = transactions.lock().unwrap();
 
-    // Start the Warp server
-    warp::serve(hello).run(local_address).await;
+                if let Some(signature) = params.get("id") {
+                    let signature =
+                        Signature::from_str(signature).expect("Invalid signature format");
+                    if let Some(transaction) = transactions.get(&signature) {
+                        return warp::reply::json(transaction);
+                    }
+                }
+
+                if let Some(day) = params.get("day") {
+                    let date = chrono::NaiveDate::parse_from_str(day, "%d/%m/%Y")
+                        .expect("Invalid date format");
+                    let transactions_for_day: Vec<&TransactionDetails> = transactions
+                        .values()
+                        .filter(|transaction| {
+                            chrono::NaiveDateTime::from_timestamp(transaction.timestamp, 0).date()
+                                == date
+                        })
+                        .collect();
+                    return warp::reply::json(&transactions_for_day);
+                }
+
+                warp::reply::json(&"Invalid query parameters")
+            },
+        );
+
+    warp::serve(transactions_filter).run(local_address).await;
+}
+
+fn with_transactions(
+    transactions: Arc<Mutex<HashMap<Signature, TransactionDetails>>>,
+) -> impl Filter<
+    Extract = (Arc<Mutex<HashMap<Signature, TransactionDetails>>>,),
+    Error = std::convert::Infallible,
+> + Clone {
+    warp::any().map(move || transactions.clone())
 }
 
 pub fn init_tracing() {
