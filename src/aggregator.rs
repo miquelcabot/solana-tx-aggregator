@@ -11,12 +11,31 @@ use solana_sdk::signature::Signature;
 use solana_transaction_status::{EncodedTransaction, UiMessage, UiTransactionEncoding};
 use tokio::time::sleep;
 
+const SLEEP_DURATION: u64 = 1;
+
+/// Solana Aggregator
+/// 
+/// This struct represents a Solana aggregator.
+/// 
+/// # Fields
+/// * `client` - The RPC client
+/// * `transactions` - The transactions, stored in a mutexed hash map
 pub struct SolanaAggregator {
     client: RpcClient,
     transactions: Arc<Mutex<HashMap<Signature, TransactionDetails>>>,
 }
 
 impl SolanaAggregator {
+    /// Create a new Solana aggregator
+    /// 
+    /// This function creates a new Solana aggregator.
+    /// 
+    /// # Arguments
+    /// * `rpc_url` - The RPC URL for Solana
+    /// * `transactions` - The transactions mutexed hash map
+    /// 
+    /// # Returns
+    /// A new Solana aggregator
     pub fn new(
         rpc_url: &str,
         transactions: Arc<Mutex<HashMap<Signature, TransactionDetails>>>,
@@ -30,6 +49,12 @@ impl SolanaAggregator {
         }
     }
 
+    /// Fetch transactions
+    /// 
+    /// This function fetches transactions from the Solana network.
+    /// 
+    /// # Arguments
+    /// * `self` - The Solana aggregator
     pub async fn fetch_transactions(&self) {
         // Set up the parameters for fetching signatures
         let mut last_signature: Option<Signature> = None;
@@ -105,7 +130,7 @@ impl SolanaAggregator {
             }
 
             // Wait for a bit before fetching new transactions
-            sleep(Duration::from_secs(1)).await;
+            sleep(Duration::from_secs(SLEEP_DURATION)).await;
         }
     }
 }
