@@ -1,21 +1,21 @@
 mod aggregator;
+mod api;
 mod transaction_details;
 mod utils;
 
-use aggregator::SolanaAggregator;
-use transaction_details::TransactionDetails;
+use crate::aggregator::SolanaAggregator;
+use crate::api::create_api;
+use crate::transaction_details::TransactionDetails;
 
 use std::{
     collections::HashMap,
     net::SocketAddr,
-    str::FromStr,
     sync::{Arc, Mutex},
 };
 
 use clap::Parser;
 use solana_sdk::signature::Signature;
 use url::Url;
-use warp::Filter;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -59,52 +59,9 @@ async fn main() {
         aggregator.fetch_transactions().await;
     });
 
-    let transactions_filter = warp::path("transactions")
-        .and(warp::query::<HashMap<String, String>>())
-        .and(with_transactions(transactions))
-        .map(
-            |params: HashMap<String, String>,
-             transactions: Arc<Mutex<HashMap<Signature, TransactionDetails>>>| {
-                let transactions = transactions.lock().unwrap();
-
-                if let Some(signature) = params.get("id") {
-                    let signature =
-                        Signature::from_str(signature).expect("Invalid signature format");
-                    if let Some(transaction) = transactions.get(&signature) {
-                        return warp::reply::json(transaction);
-                    }
-                }
-
-                if let Some(day) = params.get("day") {
-                    let date = chrono::NaiveDate::parse_from_str(day, "%d/%m/%Y")
-                        .expect("Invalid date format");
-                    let transactions_for_day: Vec<&TransactionDetails> = transactions
-                        .values()
-                        .filter(|transaction| {
-                            chrono::NaiveDateTime::from_timestamp(transaction.timestamp, 0).date()
-                                == date
-                        })
-                        .collect();
-                    return warp::reply::json(&transactions_for_day);
-                }
-
-                warp::reply::json(&"Invalid query parameters")
-            },
-        );
-
-    warp::serve(transactions_filter).run(local_address).await;
-}
-
-/// Return a mutable reference to the transactions hash map
-///
-/// This function returns a mutable reference to the transactions hash map.
-fn with_transactions(
-    transactions: Arc<Mutex<HashMap<Signature, TransactionDetails>>>,
-) -> impl Filter<
-    Extract = (Arc<Mutex<HashMap<Signature, TransactionDetails>>>,),
-    Error = std::convert::Infallible,
-> + Clone {
-    warp::any().map(move || transactions.clone())
+    // Start the API server
+    let api = create_api(transactions);
+    warp::serve(api).run(local_address).await;
 }
 
 /// Initialize tracing
