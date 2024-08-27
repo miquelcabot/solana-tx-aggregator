@@ -3,10 +3,11 @@ mod transaction_details;
 mod utils;
 
 use aggregator::SolanaAggregator;
+use transaction_details::TransactionDetails;
+
 use std::{
     collections::HashMap, net::SocketAddr, str::FromStr, sync::{Arc, Mutex}
 };
-use transaction_details::TransactionDetails;
 
 use clap::Parser;
 use solana_sdk::signature::Signature;
