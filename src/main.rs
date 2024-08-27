@@ -28,7 +28,10 @@ struct Args {
 
 #[tokio::main]
 async fn main() {
+    // Initialize tracing
     init_tracing();
+
+    // Parse the command-line arguments
     let args = Args::parse();
 
     let rpc_url = args.rpc_url.parse::<Url>().expect("Invalid RPC URL");
@@ -37,15 +40,18 @@ async fn main() {
         .parse::<SocketAddr>()
         .expect("Invalid local address");
 
+    // Log the RPC URL and local address
     tracing::info!("🌐 Solana RPC URL: {}", rpc_url);
     tracing::info!("🛠️ Local RESTful API address: {}", local_address);
 
+    // Create a new transactions hash map
     let transactions_hash: HashMap<Signature, TransactionDetails> = HashMap::new();
     let transactions = Arc::new(Mutex::new(transactions_hash));
 
     // Create a new Solana aggregator
     let aggregator = SolanaAggregator::new(rpc_url.as_str(), Arc::clone(&transactions));
 
+    // Fetch transactions in the background
     tokio::spawn(async move {
         aggregator.fetch_transactions().await;
     });
@@ -86,6 +92,9 @@ async fn main() {
     warp::serve(transactions_filter).run(local_address).await;
 }
 
+/// Return a mutable reference to the transactions hash map
+/// 
+/// This function returns a mutable reference to the transactions hash map.
 fn with_transactions(
     transactions: Arc<Mutex<HashMap<Signature, TransactionDetails>>>,
 ) -> impl Filter<
@@ -95,6 +104,9 @@ fn with_transactions(
     warp::any().map(move || transactions.clone())
 }
 
+/// Initialize tracing
+/// 
+/// This function initializes the tracing subscriber.
 pub fn init_tracing() {
     use tracing::level_filters::LevelFilter;
     use tracing_subscriber::prelude::*;
