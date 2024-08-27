@@ -72,3 +72,67 @@ fn with_transactions(
 > + Clone {
     warp::any().map(move || transactions.clone())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use solana_sdk::signature::Signature;
+    use std::sync::{Arc, Mutex};
+    use warp::test::request;
+
+    #[tokio::test]
+    async fn test_get_transaction_by_id() {
+        let mut transactions = HashMap::new();
+        let signature = Signature::new_unique();
+        transactions.insert(
+            signature,
+            TransactionDetails {
+                sender: "SenderPubkey".to_string(),
+                receiver: "ReceiverPubkey".to_string(),
+                data: "some_data".to_string(),
+                timestamp: 1620000000,
+            },
+        );
+
+        let transactions = Arc::new(Mutex::new(transactions));
+        let api = create_api(transactions);
+
+        let response = request()
+            .path(&format!("/transactions?id={}", signature))
+            .reply(&api)
+            .await;
+
+        assert_eq!(response.status(), 200);
+        let body_str = std::str::from_utf8(response.body()).unwrap(); // Convert body to &str
+        assert!(body_str.contains("SenderPubkey"));
+    }
+
+    #[tokio::test]
+    async fn test_get_transaction_by_id_not_found() {
+        let signature = Signature::new_unique();
+        let transactions = Arc::new(Mutex::new(HashMap::new()));
+        let api = create_api(transactions);
+
+        let response = request()
+            .path(&format!("/transactions?id={}", signature))
+            .reply(&api)
+            .await;
+
+        assert_eq!(response.status(), 200);
+        let body_str = std::str::from_utf8(response.body()).unwrap(); // Convert body to &str
+        assert_eq!(body_str, "null");
+    }
+
+    #[tokio::test]
+    async fn test_invalid_query_parameters() {
+        let transactions = Arc::new(Mutex::new(HashMap::new()));
+        let api = create_api(transactions);
+
+        let response = request().path("/transactions").reply(&api).await;
+
+        assert_eq!(response.status(), 200);
+        let body_str = std::str::from_utf8(response.body()).unwrap(); // Convert body to &str
+        println!("{}", body_str);
+        assert_eq!(body_str, "\"Invalid query parameters\"");
+    }
+}
