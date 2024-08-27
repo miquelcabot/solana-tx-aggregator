@@ -16,3 +16,26 @@ pub struct TransactionDetails {
     pub data: String,
     pub timestamp: i64,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_transaction_details_serialization() {
+        let transaction_details = TransactionDetails {
+            sender: "SenderPubkey".to_string(),
+            receiver: "ReceiverPubkey".to_string(),
+            data: "some_data".to_string(),
+            timestamp: 1620000000,
+        };
+
+        let serialized = serde_json::to_string(&transaction_details).unwrap();
+        let deserialized: TransactionDetails = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.sender, "SenderPubkey");
+        assert_eq!(deserialized.receiver, "ReceiverPubkey");
+        assert_eq!(deserialized.data, "some_data");
+        assert_eq!(deserialized.timestamp, 1620000000);
+    }
+}
