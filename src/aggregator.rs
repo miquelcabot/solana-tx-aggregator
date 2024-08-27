@@ -78,6 +78,16 @@ impl SolanaAggregator {
         }
     }
 
+    /// Fetch signatures
+    ///
+    /// This function fetches signatures from the Solana network.
+    ///
+    /// # Arguments
+    /// * `self` - The Solana aggregator
+    /// * `last_signature` - The last signature
+    ///
+    /// # Returns
+    /// A vector of signatures
     async fn fetch_signatures(
         &self,
         last_signature: Option<Signature>,
@@ -103,6 +113,13 @@ impl SolanaAggregator {
             .get_signatures_for_address_with_config(&account, config)
     }
 
+    /// Process signatures
+    ///  
+    /// This function processes signatures from the Solana network.
+    ///
+    /// # Arguments
+    /// * `self` - The Solana aggregator
+    /// * `signatures` - The signatures to process
     async fn process_signatures(
         &self,
         signatures: Vec<solana_client::rpc_response::RpcConfirmedTransactionStatusWithSignature>,
@@ -119,6 +136,13 @@ impl SolanaAggregator {
         }
     }
 
+    /// Fetch and process a transaction
+    ///
+    /// This function fetches and processes a transaction from the Solana network.
+    ///
+    /// # Arguments
+    /// * `self` - The Solana aggregator
+    /// * `signature` - The signature of the transaction
     async fn fetch_and_process_transaction(
         &self,
         signature: &Signature,
@@ -154,6 +178,12 @@ impl SolanaAggregator {
         Ok(())
     }
 
+    /// Update the last signature
+    ///
+    /// This function updates the last signature.
+    ///
+    /// # Arguments
+    /// * `self` - The Solana aggregator
     fn update_last_signature(&self) -> Option<Signature> {
         let transactions = self.transactions.lock().unwrap();
         transactions.keys().last().cloned()
