@@ -32,6 +32,8 @@ pub fn create_api(
                         Signature::from_str(signature).expect("Invalid signature format");
                     if let Some(transaction) = transactions.get(&signature) {
                         return warp::reply::json(transaction);
+                    } else {
+                        return warp::reply::json(&None::<TransactionDetails>); // Return null if not found
                     }
                 }
 
