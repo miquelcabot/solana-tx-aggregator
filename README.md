@@ -1,4 +1,4 @@
-# Solana Blockchain Data Aggregator
+# Solana Transaction Aggregator and REST API
 
 ## Overview
 
@@ -32,7 +32,7 @@ The application is divided into several modules, each with a distinct responsibi
 ### Command-Line Interface
 
 ```bash
-Usage: solforge-case-study [OPTIONS]
+Usage: solana-tx-aggregator [OPTIONS]
 
 Options:
   -r, --rpc-url <RPC_URL>              The address of the RPC URL for Solana [default: https://api.devnet.solana.com/]
@@ -46,8 +46,8 @@ Options:
 1. Clone the repository and navigate to the project directory.
 
 ```bash
-git clone https://github.com/miquelcabot/solforge-case-study.git
-cd solforge-case-study
+git clone https://github.com/miquelcabot/solana-tx-aggregator.git
+cd solana-tx-aggregator
 ```
 
 2. Build and run the application.

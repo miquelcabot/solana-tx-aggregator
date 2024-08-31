@@ -3980,6 +3980,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-tx-aggregator"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap 4.5.16",
+ "serde",
+ "serde_json",
+ "solana-client",
+ "solana-sdk",
+ "solana-transaction-status",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "warp",
+]
+
+[[package]]
 name = "solana-udp-client"
 version = "1.18.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4078,24 +4096,6 @@ dependencies = [
  "scroll",
  "thiserror",
  "winapi",
-]
-
-[[package]]
-name = "solforge-case-study"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "clap 4.5.16",
- "serde",
- "serde_json",
- "solana-client",
- "solana-sdk",
- "solana-transaction-status",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "url",
- "warp",
 ]
 
 [[package]]
